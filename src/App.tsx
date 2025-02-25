@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { FileText, Video } from 'lucide-react';
+import { FileText, Youtube } from 'lucide-react';
 import TextSummarizer from './components/TextSummarizer';
-import VideoSubtitles from './components/VideoSubtitles';
 import toast, { Toaster } from 'react-hot-toast';
+import YouTubeSummarizer from './components/YouTubeSummarizer';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'summarizer' | 'subtitles'>('summarizer');
+  const [activeTab, setActiveTab] = useState<'summarizer' | 'youtube'>('summarizer');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
@@ -33,21 +33,21 @@ function App() {
                 Text Summarizer
               </button>
               <button
-                onClick={() => setActiveTab('subtitles')}
+                onClick={() => setActiveTab('youtube')}
                 className={`w-1/2 py-4 px-1 text-center border-b-2 font-medium text-sm ${
-                  activeTab === 'subtitles'
-                    ? 'border-purple-500 text-purple-600'
+                  activeTab === 'youtube'
+                    ? 'border-green-500 text-green-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <Video className="inline-block w-5 h-5 mr-2" />
-                Video Subtitles
+                <Youtube className="inline-block w-5 h-5 mr-2" />
+                YouTube Summary
               </button>
             </nav>
           </div>
 
           <div className="p-6">
-            {activeTab === 'summarizer' ? <TextSummarizer /> : <VideoSubtitles />}
+            {activeTab === 'summarizer' ? <TextSummarizer /> : <YouTubeSummarizer />}
           </div>
         </div>
       </main>
