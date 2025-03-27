@@ -137,7 +137,7 @@ export default function TextSummarizer() {
     try {
       // Initialize Gemini API
       const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
       // Prepare prompt based on summary length
       const lengthPrompt = `Please provide a ${summaryLength} summary of the following text. The summary should be concise and capture the main points:`;
