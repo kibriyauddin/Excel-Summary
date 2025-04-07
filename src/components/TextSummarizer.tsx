@@ -172,72 +172,104 @@ export default function TextSummarizer() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex flex-col space-y-4">
-        <div {...getRootProps()} className="border-2 border-dashed border-blue-400 rounded-lg p-8 text-center cursor-pointer hover:border-blue-600 transition-colors">
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+      <div className="flex flex-col space-y-6">
+        <div 
+          {...getRootProps()} 
+          className="border-2 border-dashed border-indigo-300 bg-white/50 backdrop-blur-sm rounded-xl p-8 text-center cursor-pointer hover:border-indigo-500 transition-all duration-200 group"
+        >
           <input {...getInputProps()} />
-          <Upload className="w-12 h-12 mx-auto mb-4 text-blue-500" />
+          <Upload className="w-16 h-16 mx-auto mb-4 text-indigo-500 group-hover:scale-110 transition-transform duration-200" />
           {isDragActive ? (
-            <p className="text-blue-600">Drop the file here...</p>
+            <p className="text-indigo-600 font-medium">Drop your file here...</p>
           ) : (
-            <p className="text-gray-600">Drag & drop a document, or click to select</p>
+            <div className="space-y-2">
+              <p className="text-gray-700 font-medium">Drag & drop a document, or click to select</p>
+              <p className="text-sm text-gray-500">Supports TXT, PDF, DOC, DOCX, CSV, JSON, and MD files</p>
+            </div>
           )}
         </div>
 
-        <div className="flex flex-col space-y-2">
+        <div className="flex flex-col space-y-3">
           <label htmlFor="text" className="text-sm font-medium text-gray-700">Or paste your text here:</label>
-          <textarea
-            id="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="min-h-[200px] p-4 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Enter your text here..."
-          />
+          <div className="relative">
+            <textarea
+              id="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full min-h-[200px] p-4 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 resize-y"
+              placeholder="Enter your text here..."
+            />
+            <div className="absolute bottom-3 right-3 text-sm text-gray-500">
+              {text.length} characters
+            </div>
+          </div>
         </div>
 
-        <div className="flex justify-center space-x-4">
-          <button
-            onClick={() => setSummaryLength('short')}
-            className={`px-4 py-2 rounded-lg ${summaryLength === 'short' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            Short
-          </button>
-          <button
-            onClick={() => setSummaryLength('medium')}
-            className={`px-4 py-2 rounded-lg ${summaryLength === 'medium' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            Medium
-          </button>
-          <button
-            onClick={() => setSummaryLength('long')}
-            className={`px-4 py-2 rounded-lg ${summaryLength === 'long' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-          >
-            Long
-          </button>
+        <div className="flex flex-col space-y-3">
+          <label className="text-sm font-medium text-gray-700">Summary Length:</label>
+          <div className="flex justify-center space-x-4">
+            <button
+              onClick={() => setSummaryLength('short')}
+              className={`px-6 py-2 rounded-full font-medium transition-all duration-200 ${
+                summaryLength === 'short'
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Short
+            </button>
+            <button
+              onClick={() => setSummaryLength('medium')}
+              className={`px-6 py-2 rounded-full font-medium transition-all duration-200 ${
+                summaryLength === 'medium'
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Medium
+            </button>
+            <button
+              onClick={() => setSummaryLength('long')}
+              className={`px-6 py-2 rounded-full font-medium transition-all duration-200 ${
+                summaryLength === 'long'
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Long
+            </button>
+          </div>
         </div>
 
         <button
           onClick={handleSummarize}
           disabled={loading}
-          className="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+          className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-600 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-200/50"
         >
-          {loading ? (
-            <>
-              <Loader2 className="animate-spin mr-2" />
-              Summarizing...
-            </>
-          ) : (
-            <>
-              <FileText className="mr-2" />
-              Summarize Text
-            </>
-          )}
+          <div className="flex items-center justify-center space-x-2">
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Summarizing...</span>
+              </>
+            ) : (
+              <>
+                <FileText className="w-5 h-5" />
+                <span>Summarize Text</span>
+              </>
+            )}
+          </div>
         </button>
 
         {summary && (
-          <div className="mt-6 p-6 bg-gray-50 rounded-lg">
-            <h3 className="text-lg font-semibold mb-3">Summary:</h3>
-            <p className="text-gray-700 whitespace-pre-wrap">{summary}</p>
+          <div className="mt-8 bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Summary</h3>
+              <div className="prose prose-indigo max-w-none">
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{summary}</p>
+              </div>
+            </div>
           </div>
         )}
       </div>

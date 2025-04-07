@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Loader2, FileText } from 'lucide-react';
+import { Loader2, FileText, Youtube } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { supabase } from '../supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -104,51 +104,54 @@ export default function YouTubeSummarizer() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex flex-col space-y-4">
-        <div className="flex flex-col space-y-2">
+    <div className="w-full max-w-4xl mx-auto space-y-8">
+      <div className="flex flex-col space-y-6">
+        <div className="flex flex-col space-y-3">
           <label htmlFor="videoUrl" className="text-sm font-medium text-gray-700">Enter YouTube Video URL:</label>
-          <div className="flex space-x-2">
+          <div className="relative">
             <input
               type="url"
               id="videoUrl"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full p-4 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 pr-12"
               placeholder="https://www.youtube.com/watch?v=..."
             />
+            <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+              <Youtube className="w-5 h-5 text-gray-400" />
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-col space-y-2">
-          <label className="text-sm font-medium text-gray-700">Options:</label>
-          <div className="flex space-x-4">
-            <label className="flex items-center space-x-2">
+        <div className="flex flex-col space-y-3">
+          <label className="text-sm font-medium text-gray-700">Summary Options:</label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <label className="flex items-center p-4 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl space-x-3 cursor-pointer hover:border-indigo-500 transition-all duration-200">
               <input
                 type="checkbox"
                 checked={includeKeyPoints}
                 onChange={(e) => setIncludeKeyPoints(e.target.checked)}
-                className="rounded text-blue-600"
+                className="w-5 h-5 text-indigo-600 rounded-lg focus:ring-indigo-500 transition-colors"
               />
-              <span>Include Key Points</span>
+              <span className="text-gray-700">Key Points</span>
             </label>
-            <label className="flex items-center space-x-2">
+            <label className="flex items-center p-4 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl space-x-3 cursor-pointer hover:border-indigo-500 transition-all duration-200">
               <input
                 type="checkbox"
                 checked={includeQA}
                 onChange={(e) => setIncludeQA(e.target.checked)}
-                className="rounded text-blue-600"
+                className="w-5 h-5 text-indigo-600 rounded-lg focus:ring-indigo-500 transition-colors"
               />
-              <span>Include Q&A</span>
+              <span className="text-gray-700">Q&A</span>
             </label>
-            <label className="flex items-center space-x-2">
+            <label className="flex items-center p-4 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-xl space-x-3 cursor-pointer hover:border-indigo-500 transition-all duration-200">
               <input
                 type="checkbox"
                 checked={includeCodeExplanation}
                 onChange={(e) => setIncludeCodeExplanation(e.target.checked)}
-                className="rounded text-blue-600"
+                className="w-5 h-5 text-indigo-600 rounded-lg focus:ring-indigo-500 transition-colors"
               />
-              <span>Include Code Explanation</span>
+              <span className="text-gray-700">Code Explanation</span>
             </label>
           </div>
         </div>
@@ -156,23 +159,25 @@ export default function YouTubeSummarizer() {
         <button
           onClick={handleGenerateSummary}
           disabled={loading}
-          className="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+          className="w-full py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-600 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-200/50"
         >
-          {loading ? (
-            <>
-              <Loader2 className="animate-spin mr-2" />
-              Generating Summary...
-            </>
-          ) : (
-            <>
-              <FileText className="mr-2" />
-              Generate Summary
-            </>
-          )}
+          <div className="flex items-center justify-center space-x-2">
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Generating Summary...</span>
+              </>
+            ) : (
+              <>
+                <FileText className="w-5 h-5" />
+                <span>Generate Summary</span>
+              </>
+            )}
+          </div>
         </button>
 
         {videoUrl && (
-          <div className="aspect-video w-full">
+          <div className="aspect-video w-full rounded-xl overflow-hidden shadow-lg">
             <iframe
               width="100%"
               height="100%"
@@ -180,24 +185,30 @@ export default function YouTubeSummarizer() {
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
+              className="w-full h-full"
             />
           </div>
         )}
 
         {summary && (
-          <div className="mt-6 p-6 bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="prose prose-blue max-w-none">
+          <div className="mt-8 bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+            <div className="divide-y divide-gray-100">
               {summary.split('##').map((section, index) => {
                 if (!section.trim()) return null;
                 const [title, ...content] = section.split('\n');
                 return (
-                  <div key={index} className="mb-8 last:mb-0">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">{title.trim()}</h2>
-                    <div className="bg-gray-50 rounded-lg p-4">
+                  <div key={index} className="p-6">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                      {title.trim()}
+                    </h2>
+                    <div className="prose prose-indigo max-w-none">
                       {title.trim().toLowerCase().includes('key points') ? (
-                        <ul className="list-disc list-inside space-y-2">
+                        <ul className="space-y-2">
                           {content.join('\n').split('*').filter(point => point.trim()).map((point, i) => (
-                            <li key={i} className="text-gray-700">{point.trim()}</li>
+                            <li key={i} className="flex items-start space-x-2">
+                              <span className="flex-shrink-0 w-1.5 h-1.5 mt-2 rounded-full bg-indigo-500" />
+                              <span className="text-gray-700">{point.trim()}</span>
+                            </li>
                           ))}
                         </ul>
                       ) : title.trim().toLowerCase().includes('questions and answers') ? (
@@ -205,8 +216,8 @@ export default function YouTubeSummarizer() {
                           {content.join('\n').split('Question:').filter(qa => qa.trim()).map((qa, i) => {
                             const [question, answer] = qa.split('Answer:');
                             return (
-                              <div key={i} className="bg-white rounded-lg p-4 shadow-sm">
-                                <p className="font-semibold text-gray-900 mb-2">Q: {question.trim()}</p>
+                              <div key={i} className="bg-white/80 rounded-lg p-4 shadow-sm">
+                                <p className="font-medium text-indigo-900 mb-2">Q: {question.trim()}</p>
                                 <p className="text-gray-700">A: {answer?.trim()}</p>
                               </div>
                             );
@@ -215,15 +226,15 @@ export default function YouTubeSummarizer() {
                       ) : title.trim().toLowerCase().includes('code explanation') ? (
                         <div className="space-y-4">
                           {content.join('\n').split('```').map((block, i) => (
-                            <div key={i} className={`${i % 2 === 1 ? 'bg-gray-800 text-white font-mono p-4 rounded-lg' : 'text-gray-700'}`}>
+                            <div key={i} className={i % 2 === 1 ? 'bg-gray-900 text-gray-100 font-mono p-4 rounded-lg overflow-x-auto' : 'text-gray-700'}>
                               {block.trim()}
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        <div className="text-gray-700 leading-relaxed">
                           {content.join('\n').trim()}
-                        </p>
+                        </div>
                       )}
                     </div>
                   </div>
