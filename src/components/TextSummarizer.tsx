@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, FileText, Loader2 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
-import toast from 'react-hot-toast';
 import { supabase } from '../supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import mammoth from 'mammoth';
@@ -17,6 +16,7 @@ export default function TextSummarizer() {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState('');
+  const [error, setError] = useState('');
   const [summaryLength, setSummaryLength] = useState('medium');
 
   const handlePdfFile = async (file: File) => {
@@ -42,18 +42,12 @@ export default function TextSummarizer() {
       }
   
       setText(fullText.trim());
-      toast.success('PDF file processed successfully!', {
-        position: 'top-center',
-        duration: 2000
-      });
-    } catch (error) {
-      console.error('Error processing PDF:', error);
-      toast.error('Failed to process PDF file. Please ensure the file is not corrupted or password protected.', {
-        position: 'top-center',
-        duration: 3000
-      });
+      setError('');
+    } catch (err) {
+      console.error('Error processing PDF:', err);
+      setError('Failed to process PDF file. Please ensure the file is not corrupted or password protected.');
     } finally {
-      setLoading(false); // Reset loading state regardless of success or failure
+      setLoading(false);
     }
   };
 
@@ -62,16 +56,10 @@ export default function TextSummarizer() {
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.extractRawText({ arrayBuffer });
       setText(result.value.trim());
-      toast.success('DOC file processed successfully!', {
-        position: 'top-center',
-        duration: 2000
-      });
-    } catch (error) {
-      console.error('Error processing DOC:', error);
-      toast.error('Failed to process DOC file', {
-        position: 'top-center',
-        duration: 3000
-      });
+      setError('');
+    } catch (err) {
+      console.error('Error processing DOC:', err);
+      setError('Failed to process DOC file');
     }
   };
 
@@ -89,26 +77,17 @@ export default function TextSummarizer() {
             try {
               const content = e.target?.result as string;
               setText(content);
-              toast.success('File uploaded successfully!', {
-                position: 'top-center',
-                duration: 2000
-              });
-            } catch (error) {
-              console.error('Error reading file content:', error);
-              toast.error('Failed to read file content', {
-                position: 'top-center',
-                duration: 3000
-              });
+              setError('');
+            } catch (err) {
+              console.error('Error reading file content:', err);
+              setError('Failed to read file content');
             }
           };
           reader.readAsText(file);
         }
-      } catch (error) {
-        console.error('Error handling file:', error);
-        toast.error('Error handling file', {
-          position: 'top-center',
-          duration: 3000
-        });
+      } catch (err) {
+        console.error('Error handling file:', err);
+        setError('Error handling file');
       }
     }
   };
@@ -129,10 +108,11 @@ export default function TextSummarizer() {
 
   const handleSummarize = async () => {
     if (!text.trim()) {
-      toast.error('Please enter or upload text to summarize');
+      setError('Please enter or upload text to summarize');
       return;
     }
 
+    setError('');
     setLoading(true);
     try {
       // Initialize Gemini API
@@ -149,23 +129,27 @@ export default function TextSummarizer() {
       const summaryText = response.text();
       setSummary(summaryText);
       
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Store the result in Supabase
-      const { error } = await supabase.from('processing_results').insert({
-        type: 'summary',
-        input_type: 'text',
-        original_content: text,
-        processed_content: summaryText,
-        // Only set user_id if authenticated
-        ...(session?.user?.id ? { user_id: session.user.id } : {})
-      });
+      // Try to store the result in Supabase (optional, don't fail if it errors)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const { error: dbError } = await supabase.from('processing_results').insert({
+          type: 'summary',
+          input_type: 'text',
+          original_content: text,
+          processed_content: summaryText,
+          ...(session?.user?.id ? { user_id: session.user.id } : {})
+        });
 
-      if (error) throw error;
-      toast.success('Text summarized successfully!');
-    } catch (error) {
-      console.error('Summarization failed:', error);
-      toast.error('Failed to summarize text');
+        if (dbError) {
+          console.warn('Failed to store result in database:', dbError);
+        }
+      } catch (dbErr) {
+        console.warn('Database storage error:', dbErr);
+      }
+    } catch (err) {
+      console.error('Summarization failed:', err);
+      setError(err instanceof Error ? err.message : 'Failed to summarize text');
     } finally {
       setLoading(false);
     }
@@ -261,6 +245,12 @@ export default function TextSummarizer() {
             )}
           </div>
         </button>
+
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        )}
 
         {summary && (
           <div className="mt-8 bg-white/50 backdrop-blur-sm rounded-xl border border-gray-200 shadow-lg overflow-hidden">

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Loader2, FileText, Youtube } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { supabase } from '../supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -8,6 +7,7 @@ export default function YouTubeSummarizer() {
   const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState('');
+  const [error, setError] = useState('');
   const [includeKeyPoints, setIncludeKeyPoints] = useState(false);
   const [includeQA, setIncludeQA] = useState(false);
   const [includeCodeExplanation, setIncludeCodeExplanation] = useState(false);
@@ -27,34 +27,46 @@ export default function YouTubeSummarizer() {
 
   const handleGenerateSummary = async () => {
     if (!videoUrl.trim()) {
-      toast.error('Please enter a YouTube video URL');
+      setError('Please enter a YouTube video URL');
       return;
     }
+
+    setError('');
+    setSummary('');
 
     setLoading(true);
     try {
       const videoId = extractVideoId(videoUrl);
       
-      // Initialize Gemini API
+      // Initialize Gemini API with 2.5 Flash model
       const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-      // Fetch video details using YouTube Data API
-      const videoDetailsResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${import.meta.env.VITE_YOUTUBE_DATA_API_KEY}`
+      // Fetch transcript using Supadata API
+      const transcriptResponse = await fetch(
+        `https://api.supadata.ai/v1/youtube/transcript?id=${videoId}`,
+        {
+          headers: {
+            'x-api-key': import.meta.env.VITE_SUPADATA_API_KEY
+          }
+        }
       );
 
-      if (!videoDetailsResponse.ok) {
-        throw new Error('Failed to fetch video details');
+      if (!transcriptResponse.ok) {
+        const errorText = await transcriptResponse.text();
+        throw new Error(`Failed to fetch transcript from Supadata API: ${transcriptResponse.status} - ${errorText}`);
       }
 
-      const videoDetails = await videoDetailsResponse.json();
-      if (!videoDetails.items || videoDetails.items.length === 0) {
-        throw new Error('Video not found');
+      const transcriptData = await transcriptResponse.json();
+
+      if (!transcriptData || !transcriptData.content) {
+        throw new Error('No transcript available for this video');
       }
 
-      // Use video description as content for summarization
-      const transcript = videoDetails.items[0].snippet.description;
+      // Join transcript segments into a single text
+      const transcript = Array.isArray(transcriptData.content)
+        ? transcriptData.content.map((item: any) => item.text).join(' ')
+        : transcriptData.content;
 
       // Generate summary using Gemini
       const summaryPrompt = `You are a YouTube video summarizer. Provide a concise summary of the following transcript within 250 words: ${transcript}`;
@@ -82,22 +94,27 @@ export default function YouTubeSummarizer() {
 
       setSummary(result);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      // Store the result in Supabase
-      const { error } = await supabase.from('processing_results').insert({
-        type: 'summary',
-        input_type: 'url',
-        original_content: videoUrl,
-        processed_content: result,
-        user_id: session?.user?.id || null
-      });
+      // Try to store the result in Supabase (optional, don't fail if it errors)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const { error: dbError } = await supabase.from('processing_results').insert({
+          type: 'summary',
+          input_type: 'url',
+          original_content: videoUrl,
+          processed_content: result,
+          user_id: session?.user?.id || null
+        });
 
-      if (error) throw error;
-      toast.success('Summary generated successfully!');
-    } catch (error) {
-      console.error('Error generating summary:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to generate summary');
+        if (dbError) {
+          console.warn('Failed to store result in database:', dbError);
+        }
+      } catch (dbErr) {
+        console.warn('Database storage error:', dbErr);
+      }
+    } catch (err) {
+      console.error('Error generating summary:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate summary');
     } finally {
       setLoading(false);
     }
@@ -175,6 +192,12 @@ export default function YouTubeSummarizer() {
             )}
           </div>
         </button>
+
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        )}
 
         {videoUrl && (
           <div className="aspect-video w-full rounded-xl overflow-hidden shadow-lg">
