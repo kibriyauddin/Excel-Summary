@@ -1,22 +1,17 @@
 import express from 'express';
-import cors from 'cors';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const app = express();
 const port = Number(process.env.PORT || 3001);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MAX_INPUT_LENGTH = 100_000;
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS = 20;
 
 app.disable('x-powered-by');
 app.use(express.json({ limit: '1mb' }));
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map(v => v.trim()).filter(Boolean);
-app.use(cors({
-  origin(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('Origin not allowed'));
-  },
-}));
 
 // Lightweight per-process rate limit; use a shared store for multiple API instances.
 const rateBuckets = new Map();
@@ -75,7 +70,6 @@ app.post('/api/summarize/youtube', async (req, res) => {
       return res.status(400).json({ error: 'Summary options must be boolean values.' });
     }
     if (!process.env.SUPADATA_API_KEY) return res.status(503).json({ error: 'Transcript service is not configured on the server.' });
-
     const transcriptResponse = await fetch(`https://api.supadata.ai/v1/youtube/transcript?id=${encodeURIComponent(videoId)}`, {
       headers: { 'x-api-key': process.env.SUPADATA_API_KEY },
     });
@@ -88,7 +82,6 @@ app.post('/api/summarize/youtube', async (req, res) => {
     const transcript = Array.isArray(data.content) ? data.content.map(item => item.text || '').join(' ') : data.content;
     if (typeof transcript !== 'string' || !transcript.trim()) return res.status(404).json({ error: 'No usable transcript is available.' });
     if (transcript.length > MAX_INPUT_LENGTH) return res.status(413).json({ error: 'This transcript is too long to summarize.' });
-
     const model = getModel('gemini-2.5-flash');
     const parts = [];
     const summary = await model.generateContent(`You are a YouTube video summarizer. Provide a concise summary of the following transcript within 250 words: ${transcript}`);
@@ -112,8 +105,8 @@ app.post('/api/summarize/youtube', async (req, res) => {
   }
 });
 
-app.use((error, _req, res, _next) => {
-  console.error('API request failed:', error.message);
-  res.status(500).json({ error: 'An unexpected server error occurred.' });
-});
-app.listen(port, () => console.log(`Learning Assistant API listening on port ${port}`));
+app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not found.' }));
+app.use(express.static(path.resolve(__dirname, '../dist')));
+app.get('*', (_req, res) => res.sendFile(path.resolve(__dirname, '../dist/index.html')));
+
+app.listen(port, () => console.log(`Learning Assistant listening on port ${port}`));
