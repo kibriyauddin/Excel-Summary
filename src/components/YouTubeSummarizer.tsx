@@ -52,7 +52,7 @@ export default function YouTubeSummarizer() {
       setSummary(result);
 
       // Try to store the result in Supabase (optional, don't fail if it errors)
-      try {
+      if (supabase) try {
         const { data: { session } } = await supabase.auth.getSession();
         
         const { error: dbError } = await supabase.from('processing_results').insert({
