@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2, FileText, Youtube } from 'lucide-react';
 import { supabase } from '../supabase';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export default function YouTubeSummarizer() {
   const [videoUrl, setVideoUrl] = useState('');
@@ -25,6 +24,8 @@ export default function YouTubeSummarizer() {
     }
   };
 
+  const safeVideoId = (() => { try { return videoUrl.trim() ? extractVideoId(videoUrl) : ''; } catch { return ''; } })();
+
   const handleGenerateSummary = async () => {
     if (!videoUrl.trim()) {
       setError('Please enter a YouTube video URL');
@@ -38,59 +39,15 @@ export default function YouTubeSummarizer() {
     try {
       const videoId = extractVideoId(videoUrl);
       
-      // Initialize Gemini API with 2.5 Flash model
-      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-      // Fetch transcript using Supadata API
-      const transcriptResponse = await fetch(
-        `https://api.supadata.ai/v1/youtube/transcript?id=${videoId}`,
-        {
-          headers: {
-            'x-api-key': import.meta.env.VITE_SUPADATA_API_KEY
-          }
-        }
-      );
-
-      if (!transcriptResponse.ok) {
-        const errorText = await transcriptResponse.text();
-        throw new Error(`Failed to fetch transcript from Supadata API: ${transcriptResponse.status} - ${errorText}`);
-      }
-
-      const transcriptData = await transcriptResponse.json();
-
-      if (!transcriptData || !transcriptData.content) {
-        throw new Error('No transcript available for this video');
-      }
-
-      // Join transcript segments into a single text
-      const transcript = Array.isArray(transcriptData.content)
-        ? transcriptData.content.map((item: any) => item.text).join(' ')
-        : transcriptData.content;
-
-      // Generate summary using Gemini
-      const summaryPrompt = `You are a YouTube video summarizer. Provide a concise summary of the following transcript within 250 words: ${transcript}`;
-      const summaryResponse = await model.generateContent(summaryPrompt);
-      let result = `## Summary\n${summaryResponse.response.text()}\n\n`;
-
-      // Generate additional content based on options
-      if (includeKeyPoints) {
-        const keyPointsPrompt = `Extract and list the key points from the following video transcript: ${transcript}`;
-        const keyPointsResponse = await model.generateContent(keyPointsPrompt);
-        result += `## Key Points\n${keyPointsResponse.response.text()}\n\n`;
-      }
-
-      if (includeQA) {
-        const qaPrompt = `Based on the following video transcript, generate 5 relevant questions and their answers. Format each as 'Question: [question]' followed by 'Answer: [answer]' without any asterisks or additional formatting: ${transcript}`;
-        const qaResponse = await model.generateContent(qaPrompt);
-        result += `## Questions and Answers\n${qaResponse.response.text()}\n\n`;
-      }
-
-      if (includeCodeExplanation) {
-        const codePrompt = `Extract the code snippets from the following video transcript and provide a detailed explanation for each code snippet: ${transcript}`;
-        const codeResponse = await model.generateContent(codePrompt);
-        result += `## Code Explanation\n${codeResponse.response.text()}\n\n`;
-      }
+      const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+      const response = await fetch(`${apiBaseUrl}/api/summarize/youtube`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId, includeKeyPoints, includeQA, includeCodeExplanation }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Failed to generate video summary');
+      const result = payload.summary;
 
       setSummary(result);
 
@@ -199,12 +156,12 @@ export default function YouTubeSummarizer() {
           </div>
         )}
 
-        {videoUrl && (
+        {safeVideoId && (
           <div className="aspect-video w-full rounded-xl overflow-hidden shadow-lg">
             <iframe
               width="100%"
               height="100%"
-              src={`https://www.youtube.com/embed/${extractVideoId(videoUrl)}`}
+              src={`https://www.youtube.com/embed/${safeVideoId}`}
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
