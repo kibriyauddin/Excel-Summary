@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: excel-summary
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npm run server
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SUPADATA_API_KEY
+        sync: false
