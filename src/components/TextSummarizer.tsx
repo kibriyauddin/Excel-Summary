@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Upload, FileText, Loader2 } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { supabase } from '../supabase';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import mammoth from 'mammoth';
 import * as pdfjs from 'pdfjs-dist';
 
@@ -115,18 +114,16 @@ export default function TextSummarizer() {
     setError('');
     setLoading(true);
     try {
-      // Initialize Gemini API
-      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+      const response = await fetch(`${apiBaseUrl}/api/summarize/text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, summaryLength }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Failed to summarize text');
+      const summaryText = payload.summary;
 
-      // Prepare prompt based on summary length
-      const lengthPrompt = `Please provide a ${summaryLength} summary of the following text. The summary should be concise and capture the main points:`;
-      const prompt = `${lengthPrompt}\n\n${text}`;
-
-      // Generate summary using Gemini
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const summaryText = response.text();
       setSummary(summaryText);
       
       // Try to store the result in Supabase (optional, don't fail if it errors)
